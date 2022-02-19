@@ -1,0 +1,89 @@
+* latexwrapper
+  Automates compiling LaTeX documents.
+
+** How?
+   - Compiles the first ~.tex~ in the current directory if no file was provided
+   - Runs ~pdflatex~ or any other compiler with the ~--compiler~ option as many times as needed
+   - Prepare bibliography using ~biber~
+   - Embed fonts in the pdf using ~gs~
+   - Hides build files
+
+** Installation
+   #+begin_src shell-script
+     make install
+   #+end_src
+
+** Test drive
+   #+begin_src fundamental
+     paper> ls -a
+     .  ..  figs  paper.tex  refs.bib
+
+     paper> latexwrapper
+     $ pdflatex -interaction=nonstopmode -synctex=1 --halt-on-error ./paper.tex
+     $ biber ./paper
+     $ pdflatex -interaction=nonstopmode -synctex=1 --halt-on-error ./paper.tex
+     $ pdflatex -interaction=nonstopmode -synctex=1 --halt-on-error ./paper.tex
+     $ gs -q -dNOPAUSE -dBATCH -dPDFSETTINGS=/prepress -sDEVICE=pdfwrite -sOutputFile=./paper.pdf.embedded.pdf ./paper.pdf
+     $ mv ./paper.pdf.embedded.pdf ./paper.pdf
+     >>> BIBLIOGRAPHY ():
+     INFO - This is Biber 2.16
+     INFO - Logfile is './paper.blg'
+     INFO - Reading './paper.bcf'
+     INFO - Found 15 citekeys in bib section 0
+     INFO - Processing section 0
+     INFO - Looking for bibtex format file 'refs.bib' for section 0
+     INFO - LaTeX decoding ...
+     INFO - Found BibTeX data source 'refs.bib'
+     INFO - Overriding locale 'en-US' defaults 'variable = shifted' with 'variable = non-ignorable'
+     INFO - Overriding locale 'en-US' defaults 'normalization = NFD' with 'normalization = prenormalized'
+     INFO - Sorting list 'none/global//global/global' of type 'entry' with template 'none' and locale 'en-US'
+     INFO - No sort tailoring available for locale 'en-US'
+     INFO - Writing './paper.bbl' with encoding 'UTF-8'
+     INFO - Output to ./paper.bbl
+     >>> WARNINGS:
+     Package hyperref Warning: Unexpected value for option `hidelinks'
+     (hyperref)                is ignored on input line 60.
+     LaTeX Warning: `!h' float specifier changed to `!ht'.
+
+     paper> latexwrapper
+     $ pdflatex -interaction=nonstopmode -synctex=1 --halt-on-error ./paper.tex
+     $ gs -q -dNOPAUSE -dBATCH -dPDFSETTINGS=/prepress -sDEVICE=pdfwrite -sOutputFile=./paper.pdf.embedded.pdf ./paper.pdf
+     $ mv ./paper.pdf.embedded.pdf ./paper.pdf
+     >>> WARNINGS:
+     Package hyperref Warning: Unexpected value for option `hidelinks'
+     (hyperref)                is ignored on input line 60.
+     LaTeX Warning: `!h' float specifier changed to `!ht'.
+
+     paper> ls -a
+     .  ..  figs  .paper.build  paper.pdf  paper.synctex.gz  paper.tex  refs.bib
+
+     paper> ls -a .paper.build/
+     .  ..  paper.aux  paper.bbl  paper.bcf  paper.blg  paper.log  paper.out  paper.run.xml
+
+     paper> latexwrapper clean
+     >>> DELETING:
+     ./.paper.build
+     ./paper.synctex.gz
+     ./paper.pdf
+     ./paper.aux
+     ./paper.bbl
+     ./paper.bcf
+     ./paper.blg
+     ./paper.log
+     ./paper.out
+     ./paper.run.xml
+     ./paper.aux
+     ./paper.lof
+     ./paper.lot
+     ./paper.toc
+     ./paper.nav
+     ./paper.snm
+     ./paper.vrb
+     ./texput.log
+
+     paper> ls -a
+     .  ..  figs  paper.tex  refs.bib
+   #+end_src
+
+** License
+   GPL3

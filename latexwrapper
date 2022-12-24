@@ -6,7 +6,10 @@ YELLOW='\033[1;33m'
 GREEN='\033[1;32m'
 RESET='\033[0m'
 
+f=
+cmd=build
 compiler=pdflatex
+ascii=
 
 run_showing() {
     printf "$GREEN\$$RESET %s\n" "$*" >&2
@@ -53,9 +56,9 @@ garbage() {
 }
 
 garbage_hide() {
-    F="$1"
-    D=$(dirname "$F")
-    N=$(basename "$F")
+    f="$1"
+    D=$(dirname "$f")
+    N=$(basename "$f")
     cd "$D" || return 1
     mkdir -p ".$N.build"
     G=$(garbage "$N")
@@ -64,9 +67,9 @@ garbage_hide() {
 }
 
 garbage_show() {
-    F="$1"
-    D=$(dirname "$F")
-    N=$(basename "$F")
+    f="$1"
+    D=$(dirname "$f")
+    N=$(basename "$f")
     cd "$D" || return 1
     mv ".$N.build/"* . 2>/dev/null
 }
@@ -89,82 +92,47 @@ bibtex_needed() {
         echo "$1" | grep -iq 'Please (re)run BibTeX on the file'
 }
 
-main() {
-    ascii=; [ "$1" = '-a' ] && ascii=1 && shift
-    [ -t 1 ] && [ -t 0 ] || ascii=1
+build() {
+    f="$1"
 
-    [ "$1" = '--compiler' ] && {
-        compiler="$2"
-        shift 2
-    }
-
-    clean=
-    [ "$1" = 'clean' ] && clean=1 && shift
-
-    if [ "$ascii" ]; then
-        BLUE=
-        RED=
-        YELLOW=
-        GREEN=
-        RESET=
-    fi
-
-    F="$1"
-
-    [ -n "$F" ] || {
-        F=$(find . -maxdepth 1 -name '*.tex' | head -n1)
-    }
-
-    [ -f "$F" ] || {
-        printf "$RED>>> ERROR:$RESET '%s' is not a file\n" "$F"
-        return 1
-    }
-
-    F="${F%.*}"
-
-    if [ "$clean" ]; then
-        cleanup "$F"
-        return
-    fi
-
-    garbage_show "$F"
+    garbage_show "$f"
 
     # first latex run
-    if OUT=$(gen_pdf "$F.tex"); then
+    if OUT=$(gen_pdf "$f.tex"); then
 
         # run bib if needed
         if rerun_needed "$OUT"; then
-            if BIBOUT=$(gen_bib "$F") &&
+            if BIBOUT=$(gen_bib "$f") &&
                     ! echo "$BIBOUT" | grep -q 'does not contain any citations!'
             then
                 # another latex is always needed after biber
-                OUT=$(gen_pdf "$F.tex")
+                OUT=$(gen_pdf "$f.tex")
 
                 # sometimes, the files get messy and a clean build is needed
                 if bibtex_needed "$OUT"; then
-                    cleanup "$F"
-                    BIBOUT=$(gen_bib "$F") &&
-                        OUT=$(gen_pdf "$F.tex")
+                    cleanup "$f"
+                    BIBOUT=$(gen_bib "$f") &&
+                        OUT=$(gen_pdf "$f.tex")
                 fi
             fi
         fi
 
         # another latex run if needed
         if rerun_needed "$OUT"; then
-            OUT=$(gen_pdf "$F.tex")
+            OUT=$(gen_pdf "$f.tex")
         fi
 
-        embed_fonts "$F.pdf"
+        embed_fonts "$f.pdf"
     fi
 
     ERRS=$(echo "$OUT" |
-               grep -A 1 -E '^\! .+')
+               grep -A 1 -E '^\\! .+')
     WRNS=$(echo "$OUT" |
                grep -A 1 -E 'Warning:' |
                grep -E '^[A-Za-z\(]')
 
     if [ "$BIBOUT" ]; then
-        printf "$BLUE>>> BIBLIOGRAPHY (%s):$RESET\n" "$BIB"
+        printf "$BLUE>>> BIBLIOGRAPHY:$RESET\n"
         echo "$BIBOUT"
     fi
     if [ "$ERRS" ]; then
@@ -176,11 +144,107 @@ main() {
         echo "$WRNS"
     fi
 
-    garbage_hide "$F"
+    garbage_hide "$f"
 
     if [ "$ERRS" ]; then
         return 1
     fi
+}
+
+get_data_file() {
+    t="$1"
+    for d in $HOME/.local/share /usr/local/share /usr/share; do
+        target="$d/latexwrapper/$t"
+        if [ -f "$target" ]; then
+            echo "$target"
+            return 0
+        fi
+    done
+    return 1
+}
+
+gen_template() {
+    f="$1"
+    [ -n "$f" ] || f=paper
+    t=$(get_data_file template.tex)
+    [ -f "$t" ] || return 1
+    cp "$t" "$f.tex"
+}
+
+symbols() {
+    s=$(get_data_file symbols.org)
+    [ -f "$s" ] || return 1
+    column -s '|' -o '|' -t -H 1,5 <"$s" | less
+}
+
+show_help() {
+    self=$(basename "$0")
+    printf 'usage: %s [OPTION]... <CMD> <TEX_FILE>\n' "$self"
+    echo
+    echo 'Options:'
+    echo '  -a                 enable ascii mode'
+    echo '  -c, --compiler CC  latex compiler'
+    echo
+    echo 'Commands:'
+    echo '  b, build     compiler .tex document (default command)'
+    echo '  c, clean     clean build files'
+    echo '  s, symbols   tex symbol cheatsheet'
+    echo '  t, template  generate a template .tex file'
+}
+
+main() {
+    skip=
+    for a; do
+        [ -n "$skip" ] &&
+            skip= &&
+            continue
+
+        case "$a" in
+            -a)                   ascii=1;       shift ;;
+            -c|--compiler) shift; compiler="$1"; shift; skip=1 ;;
+            build|b)              cmd=build;     shift ;;
+            clean|c)              cmd=clean;     shift ;;
+            symbols|s)            cmd=symbols;   shift ;;
+            template|t)           cmd=template;  shift ;;
+            *.tex)                f="$a";        shift ;;
+
+            -h|--help)
+                show_help
+                return ;;
+
+            *)
+                printf "Unknown argument '%s'" "$a"
+                show_help
+                return 1 ;;
+        esac
+    done
+
+    if [ "$ascii" ]; then
+        BLUE=
+        RED=
+        YELLOW=
+        GREEN=
+        RESET=
+    fi
+
+    if [ -z "$f" ]; then
+        f=$(find . -maxdepth 1 -name '*.tex' | head -n1)
+    fi
+    if [ ! -f "$f" ]; then
+        case "$cmd" in
+            build|clean)
+                printf "$RED>>> ERROR:$RESET '%s' is not a file\n" "$f"
+                return 1 ;;
+        esac
+    fi
+    f="${f%.*}"
+
+    case "$cmd" in
+        build)    build        "$f" ;;
+        clean)    cleanup      "$f" ;;
+        template) gen_template "$f" ;;
+        symbols)  symbols           ;;
+    esac
 }
 
 main "$@"

@@ -7,6 +7,7 @@ GREEN='\033[1;32m'
 RESET='\033[0m'
 
 f=
+f_bib=
 cmd=build
 compiler=pdflatex
 ascii=
@@ -22,7 +23,12 @@ gen_pdf() {
 }
 
 gen_bib() {
-    run_showing biber "$@"
+    if grep -q '^\\usepackage.*\[.*biber.*\]{biblatex}' "$1.tex"; then
+        bibtexer=biber
+    else
+        bibtexer=bibtex
+    fi
+    run_showing "$bibtexer" "$@"
 }
 
 embed_fonts() {
@@ -81,6 +87,13 @@ cleanup() {
     echo "$G" | xargs rm -rf
 }
 
+newer_than() {
+    [ -s "$1" ] && [ -s "$2" ] && {
+        res=$(find "$1" -prune -newer "$2")
+        [ -n "$res" ]
+    }
+}
+
 rerun_needed() {
     echo "$1" | grep -iq 'Warning: .*rerun ' ||
         echo "$1" | grep -iq 'Warning: .*(re)run ' ||
@@ -101,7 +114,7 @@ build() {
     if OUT=$(gen_pdf "$f.tex"); then
 
         # run bib if needed
-        if rerun_needed "$OUT"; then
+        if rerun_needed "$OUT" || newer_than "$f_bib" "$f.blg"; then
             if BIBOUT=$(gen_bib "$f") &&
                     ! echo "$BIBOUT" | grep -q 'does not contain any citations!'
             then
@@ -238,6 +251,7 @@ main() {
         esac
     fi
     f="${f%.*}"
+    f_bib=$(find . -maxdepth 1 -name '*.bib' | head -n1)
 
     case "$cmd" in
         build)    build        "$f" ;;

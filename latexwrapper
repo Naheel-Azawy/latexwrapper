@@ -58,6 +58,7 @@ garbage() {
     echo "$1.nav"
     echo "$1.snm"
     echo "$1.vrb"
+    echo "$1.idx"
     echo "./texput.log"
 }
 
@@ -95,9 +96,11 @@ newer_than() {
 }
 
 rerun_needed() {
-    echo "$1" | grep -iq 'Warning: .*rerun ' ||
-        echo "$1" | grep -iq 'Warning: .*(re)run ' ||
-        echo "$1" | grep -iq 'Warning: .*again '
+    echo "$1" | grep -iq 'Warning: .*rerun '         ||
+        echo "$1" | grep -iq 'Warning: .*(re)run '   ||
+        echo "$1" | grep -iq 'Warning: .*again '     ||
+        echo "$1" | grep -iq 'Warning: .*re-run '    ||
+        echo "$1" | grep -iq 'Rerun to get outlines right'
 }
 
 bibtex_needed() {
@@ -130,10 +133,14 @@ build() {
             fi
         fi
 
-        # another latex run if needed
-        if rerun_needed "$OUT"; then
+        # more latex runs if needed
+        reruns_max=5
+        reruns_ctr=0
+        while rerun_needed "$OUT"; do
             OUT=$(gen_pdf "$f.tex")
-        fi
+            reruns_ctr=$((reruns_ctr + 1))
+            [ "$reruns_ctr" = "$reruns_max" ] && break
+        done
 
         embed_fonts "$f.pdf"
     fi

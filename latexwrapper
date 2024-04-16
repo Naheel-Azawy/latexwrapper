@@ -44,6 +44,9 @@ garbage() {
         N=$(basename "$1")
         echo "./.$N.build"
         echo "$1.synctex.gz"
+    }
+    [ "$1" = '--pdf' ] && {
+        shift
         echo "$1.pdf"
     }
     echo "$1.aux"
@@ -84,7 +87,7 @@ garbage_show() {
 }
 
 cleanup() {
-    G=$(garbage --all "$1")
+    G=$(garbage --all "$@")
     printf "$RED>>> DELETING:$RESET\n"
     echo "$G"
     echo "$G" | xargs rm -rf
@@ -137,7 +140,7 @@ build() {
 
                 # sometimes, the files get messy and a clean build is needed
                 if bibtex_needed "$OUT"; then
-                    cleanup "$f"
+                    cleanup --pdf "$f"
                     BIBOUT=$(gen_bib "$f") &&
                         OUT=$(gen_pdf "$f.tex")
                 fi
@@ -236,18 +239,46 @@ jail() {
     (
         cp "$SELF" "$jail_dir/" &&
             cd "$jail_dir/doc/" &&
-            unzip "$zip"
+            run_showing unzip "$zip"
     )
 
-    run_showing                    \
-        bwrap                      \
-        --bind / /                 \
-        --dev /dev                 \
-        --unshare-all              \
-        --die-with-parent          \
-        --bind "$jail_dir" "$HOME" \
-        /bin/sh -c                 \
-        'cd ~/doc/ && sh ~/latexwrapper 2>&1 | tee ~/log'
+    script="cd ~/doc/"
+    script="$script && sh ~/latexwrapper 2>&1 | tee ~/log"
+    script="$script && ~/latexwrapper clear >/dev/null"
+
+    jail_method=none
+    case "$jail_method" in
+        bwrap)
+            run_showing                    \
+                bwrap                      \
+                --bind / /                 \
+                --dev /dev                 \
+                --unshare-all              \
+                --die-with-parent          \
+                --bind "$jail_dir" "$HOME" \
+                sh -c "$script" ;;
+
+        firejail)
+            run_showing               \
+                firejail              \
+                --noprofile           \
+                --private-tmp         \
+                --blacklist=/mnt      \
+                --net=none            \
+                --private="$jail_dir" \
+                sh -c "$script" ;;
+
+        docker)
+            run_showing              \
+                docker run --rm -it  \
+                -v "$jail_dir":/root \
+                texlive/texlive      \
+                sh -c "$script" ;;
+
+        none)
+            (cd "$jail_dir/doc/" &&
+                 "$SELF" 2>&1 | tee ../log)
+    esac
 
     s=0
     tex=$(cd "$jail_dir/doc/" && find_tex_file)
@@ -262,7 +293,7 @@ jail() {
         s=1
     fi
 
-    run_showing rm -r "$jail_dir"
+    run_showing rm -rf "$jail_dir"
     return $s
 }
 
@@ -276,7 +307,8 @@ show_help() {
     echo
     echo 'Commands:'
     echo '  b, build     compile .tex document (default command)'
-    echo '  c, clean     clean build files'
+    echo '  c, clean     clean build files and pdf'
+    echo '  r, clear     clear build files'
     echo '  s, symbols   tex symbol cheatsheet'
     echo '  t, template  generate a template .tex file'
 }
@@ -293,6 +325,7 @@ main() {
             -c|--compiler) shift; compiler="$1"; shift; skip=1 ;;
             build|b)              cmd=build;     shift ;;
             clean|c)              cmd=clean;     shift ;;
+            clear|r)              cmd=clear;     shift ;;
             symbols|s)            cmd=symbols;   shift ;;
             template|t)           cmd=template;  shift ;;
             *.tex)                f="$a";        shift ;;
@@ -335,10 +368,11 @@ main() {
     f_bib=$(find . -maxdepth 1 -name '*.bib' | head -n1)
 
     case "$cmd" in
-        build)    build        "$f" ;;
-        clean)    cleanup      "$f" ;;
-        template) gen_template "$f" ;;
-        symbols)  symbols           ;;
+        build)    build         "$f" ;;
+        clean)    cleanup --pdf "$f" ;;
+        clear)    cleanup       "$f" ;;
+        template) gen_template  "$f" ;;
+        symbols)  symbols            ;;
     esac
 }
 

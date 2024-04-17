@@ -66,36 +66,36 @@ section .details span {
     background: #5F87D7;
     border-radius: inherit;
 }
-.uploaded-area {
+.items-area {
     overflow-y: scroll;
 }
-.uploaded-area.onprogress {
+.items-area.onprogress {
     max-height: 150px;
 }
-.uploaded-area::-webkit-scrollbar {
+.items-area::-webkit-scrollbar {
     width: 0px;
 }
-.uploaded-area .row .content {
+.items-area .row .content {
     display: flex;
     align-items: center;
 }
-.uploaded-area .row .details {
+.items-area .row .details {
     display: flex;
     margin-left: 15px;
     flex-direction: column;
 }
-.uploaded-area .row .details .size {
+.items-area .row .details .size {
     color: #aaa;
     font-size: 11px;
 }
-.uploaded-area .row .details .url {
+.items-area .row .details .url {
     color: white;
     background-color: black;
     width: 100%;
 }
-.uploaded-area .row .details .go {
+.items-area .row .details .go {
     color: white;
 }
-.uploaded-area i.fa-check {
+.items-area i.fa-check {
     font-size: 16px;
 }

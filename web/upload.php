@@ -1,24 +1,15 @@
 <?php
 
-$maxSize = 2147483648;
-$maxAge = 24*60*60;
+require "common.php";
 
 $file_name =  $_FILES["file"]["name"];
 $tmp_name = $_FILES["file"]["tmp_name"];
-$target_dir = dirname(__FILE__) . "/files/";
 $target_file = $target_dir . $file_name;
 
 $ok = 1;
 
 // cleanups
-$now = time();
-foreach (glob($target_dir . "*") as $filename) {
-    $age = $now - filemtime($filename);
-    if ($age > $maxAge) {
-        echo "deleted '", $filename, "' (age = ", $age, ") <br>";
-        unlink($filename);
-    }
-}
+cleanup($target_dir, $maxAge);
 
 // limit size
 if ($_FILES["file"]["size"] > $maxSize) {
@@ -30,11 +21,6 @@ if ($_FILES["file"]["size"] > $maxSize) {
 if (!move_uploaded_file($tmp_name, $target_file)) {
     echo "Failed moving file '", $tmp_name, "' to '", $target_file, "'";
     $ok = 0;
-}
-
-// for use in exec
-function str($s) {
-    return '"' . htmlspecialchars($s, ENT_QUOTES, 'UTF-8') . '"';
 }
 
 if ($ok == 0) {

@@ -12,13 +12,7 @@ form.addEventListener("click", () => fileInput.click());
 fileInput.onchange = ({target}) => {
     let file = target.files[0];
     if (file) {
-        let fileName = file.name;
-        const max = 30;
-        if (fileName.length >= max) {
-            let splitName = fileName.split('.');
-            fileName = splitName[0].substring(0, max + 1) + "... ." + splitName[1];
-        }
-        uploadFile(fileName, file.name);
+        uploadFile(file.name, file.name);
     }
 };
 
@@ -53,7 +47,7 @@ function uploadFile(name, filename) {
         progressArea.innerHTML = progressHTML;
 
         if (loaded == total) {
-            const url = location.origin + "/files/" + encodeURI(filename).replace(".zip", ".pdf");
+            const url = location.href + "/files/" + encodeURI(filename).replace(".zip", ".pdf");
             const f = "var inp=this; setTimeout(function(){inp.select();},10);";
             progressArea.innerHTML = "";
             let uploadedHTML = `<li class="row">
@@ -61,14 +55,17 @@ function uploadFile(name, filename) {
                 <div class="details">
                   <span class="name">${name} • Uploaded</span>
                   <span class="size">${fileSize}</span><br>
+                  <div id="pdf" style="visibility: collapse">
                   <textarea class="url" readonly onfocus="${f}">${url}</textarea>
-                  <a class="go" href="${url}">DOWNLOAD</a>
+                  <a class="go" href="${url}">OPEN</a>
+                  </div>
                   <br><pre style="background: black; color: white" id="log"></pre>
                 </div>
               </div>
             </li>`;
             uploadedArea.classList.remove("onprogress");
             uploadedArea.innerHTML = uploadedHTML;
+            document.getElementById("log").innerHTML = "Processing...";
         }
     });
 
@@ -78,6 +75,9 @@ function uploadFile(name, filename) {
             try {
                 document.getElementById("log").innerHTML =
                     xhr.responseText.split("LOG:")[1].trim();
+                if (xhr.responseText.split("LOG:")[2].trim() == "OK") {
+                    document.getElementById("pdf").style.visibility = "visible";
+                }
             } catch (_) {}
         }
     };

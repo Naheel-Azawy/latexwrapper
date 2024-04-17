@@ -1,0 +1,31 @@
+* latexwrapper - web interface
+
+** Installation
+#+begin_src shell-script
+  make install
+#+end_src
+
+Example Nginx config:
+
+#+begin_src conf
+  location /latex {
+      auth_basic           "Personal area";
+      auth_basic_user_file /etc/httpd/.htpasswd;
+
+      location ~ \.php$ {
+          include fastcgi_params;
+          fastcgi_pass        unix:/run/php-fpm/php-fpm.sock;
+          fastcgi_index       index.php;
+          fastcgi_buffers     8 16k;
+          fastcgi_buffer_size 32k;
+          fastcgi_param  DOCUMENT_ROOT   $realpath_root;
+          fastcgi_param  SCRIPT_FILENAME $realpath_root$fastcgi_script_name;
+
+          client_max_body_size 100M;
+      }
+  }
+
+#+end_src
+
+** License
+GPL3

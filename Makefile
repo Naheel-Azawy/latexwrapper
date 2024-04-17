@@ -6,7 +6,8 @@ install:
 	mkdir -p $(BIN_PREFIX) $(DAT_PREFIX)
 	cp -f latexwrapper $(BIN_PREFIX)
 	cp -f symbols.org template.tex $(DAT_PREFIX)
-	mkdir -p /srv/http/latex/
+	mkdir -p /srv/http/latex/files
+	chown -R http:http /srv/http/latex/files
 	cp web/* /srv/http/latex/
 
 uninstall:

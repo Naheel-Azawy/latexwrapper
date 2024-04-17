@@ -270,14 +270,18 @@ jail() {
 
         docker)
             run_showing              \
-                docker run --rm -it  \
+                docker run --rm -i   \
                 -v "$jail_dir":/root \
                 texlive/texlive      \
                 sh -c "$script" ;;
 
         none)
             (cd "$jail_dir/doc/" &&
-                 "$SELF" 2>&1 | tee ../log)
+                 "$SELF" 2>&1 | tee ../log) ;;
+
+        *)
+            echo "UNKNOWN jail method!"
+            return 1
     esac
 
     s=0
@@ -287,8 +291,8 @@ jail() {
         target=$(dirname "$zip")
         name=$(basename "$zip")
         name="${name%.*}"
-        run_showing cp "$jail_dir/doc/${tex%.*}.pdf" "$target/${name}.pdf"
-        run_showing cp "$jail_dir/log" "$target/${name}.log"
+        run_showing cp "$jail_dir/doc/${tex%.*}.pdf" "$target/${name}.pdf" || s=1
+        run_showing cp "$jail_dir/log" "$target/${name}.log"               || s=1
     else
         s=1
     fi

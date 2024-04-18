@@ -39,31 +39,41 @@ embed_fonts() {
 }
 
 garbage() {
-    [ "$1" = '--all' ] && {
+    f=
+    delall=
+    delpdf=
+    for a; do
+        case "$a" in
+            '--all') delall=1 ;;
+            '--pdf') delpdf=1 ;;
+            *)       f="$a"   ;;
+        esac
+    done
+    [ -n "$delpdf" ] && {
         shift
-        N=$(basename "$1")
+        echo "$f.pdf"
+    }
+    [ -n "$delall" ] && {
+        shift
+        N=$(basename "$f")
         echo "./.$N.build"
-        echo "$1.synctex.gz"
+        echo "$f.synctex.gz"
     }
-    [ "$1" = '--pdf' ] && {
-        shift
-        echo "$1.pdf"
-    }
-    echo "$1.aux"
-    echo "$1.bbl"
-    echo "$1.bcf"
-    echo "$1.blg"
-    echo "$1.log"
-    echo "$1.out"
-    echo "$1.run.xml"
-    echo "$1.aux"
-    echo "$1.lof"
-    echo "$1.lot"
-    echo "$1.toc"
-    echo "$1.nav"
-    echo "$1.snm"
-    echo "$1.vrb"
-    echo "$1.idx"
+    echo "$f.aux"
+    echo "$f.bbl"
+    echo "$f.bcf"
+    echo "$f.blg"
+    echo "$f.log"
+    echo "$f.out"
+    echo "$f.run.xml"
+    echo "$f.aux"
+    echo "$f.lof"
+    echo "$f.lot"
+    echo "$f.toc"
+    echo "$f.nav"
+    echo "$f.snm"
+    echo "$f.vrb"
+    echo "$f.idx"
     echo "./texput.log"
 }
 

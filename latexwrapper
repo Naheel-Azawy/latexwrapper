@@ -38,69 +38,22 @@ embed_fonts() {
     run_showing mv "$1.embedded.pdf" "$1"
 }
 
-garbage() {
-    f=
-    delall=
-    delpdf=
-    for a; do
-        case "$a" in
-            '--all') delall=1 ;;
-            '--pdf') delpdf=1 ;;
-            *)       f="$a"   ;;
-        esac
-    done
-    [ -n "$delpdf" ] && {
-        shift
-        echo "$f.pdf"
-    }
-    [ -n "$delall" ] && {
-        shift
-        N=$(basename "$f")
-        echo "./.$N.build"
-        echo "$f.synctex.gz"
-    }
-    echo "$f.aux"
-    echo "$f.bbl"
-    echo "$f.bcf"
-    echo "$f.blg"
-    echo "$f.log"
-    echo "$f.out"
-    echo "$f.run.xml"
-    echo "$f.aux"
-    echo "$f.lof"
-    echo "$f.lot"
-    echo "$f.toc"
-    echo "$f.nav"
-    echo "$f.snm"
-    echo "$f.vrb"
-    echo "$f.idx"
-    echo "./texput.log"
-}
-
-garbage_hide() {
-    f="$1"
-    D=$(dirname "$f")
-    N=$(basename "$f")
-    cd "$D" || return 1
-    mkdir -p ".$N.build"
-    G=$(garbage "$N")
-    echo "$G" |
-        xargs -I {} mv {} ".$N.build/" 2>/dev/null
-}
-
-garbage_show() {
-    f="$1"
-    D=$(dirname "$f")
-    N=$(basename "$f")
-    cd "$D" || return 1
-    mv ".$N.build/"* . 2>/dev/null
-}
-
 cleanup() {
-    G=$(garbage --all "$@")
     printf "$RED>>> DELETING:$RESET\n"
-    echo "$G"
-    echo "$G" | xargs rm -rf
+    n=$(basename "$f")
+    echo "./.$n.build"
+    rm -rf "./.$n.build"
+}
+
+links() {
+    n=$(basename "$f")
+    b="./.$n.build"
+    find . -mindepth 1 -type d | grep -v "$b" | xargs -I {} mkdir -p "$b"/{}
+    find . -mindepth 1 -type f | grep -v "$b" | while read -r file; do
+        if ! [ -L "$PWD/$b/$file" ]; then
+            ln -sf "$PWD/$file" "$PWD/$b/$file"
+        fi
+    done
 }
 
 newer_than() {
@@ -134,9 +87,18 @@ highlight_lines() {
 
 build() {
     f="$1"
+    links
+    n=$(basename "$f")
+    b="./.$n.build"
 
-    garbage_show "$f"
+    (cd "$b" && build_real) && {
+        for ext in pdf synctex.gz; do
+            [ -f "$b/$n.$ext" ] && ln -sf "$b/$n.$ext" "$n.$ext"
+        done
+    }
+}
 
+build_real() {
     # first latex run
     if OUT=$(gen_pdf "$f.tex"); then
 
@@ -187,8 +149,6 @@ build() {
         printf "$YELLOW>>> WARNINGS:$RESET\n"
         echo "$WRNS"
     fi
-
-    garbage_hide "$f"
 
     pdf="$f.pdf"
     if [ ! -f "$pdf" ]; then

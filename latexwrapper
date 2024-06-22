@@ -11,6 +11,7 @@ SELF=$(realpath "$0")
 f=
 fz=
 f_bib=
+f_dir=
 cmd=build
 compiler=pdflatex
 ascii=
@@ -41,8 +42,10 @@ embed_fonts() {
 cleanup() {
     printf "$RED>>> DELETING:$RESET\n"
     n=$(basename "$f")
-    echo "./.$n.build"
-    rm -rf "./.$n.build"
+    run_showing rm -rf "$f_dir/.$n.build"
+    if [ "$1" = '--pdf' ]; then
+        run_showing rm -f "$f_dir/$n.pdf" "$f_dir/$n.synctex.gz"
+    fi
 }
 
 links() {
@@ -50,13 +53,15 @@ links() {
     b="./.$n.build"
     find . -mindepth 1 -type d | grep -v "$b" | xargs -I {} mkdir -p "$b"/{}
     find . -mindepth 1 -type f | grep -v "$b" | while read -r file; do
-        if ! [ -L "$PWD/$b/$file" ]; then
+        if ! [ -L "$PWD/$b/$file" ] ||
+                newer_than "$PWD/$file" "$PWD/$b/$file"; then
             ln -sf "$PWD/$file" "$PWD/$b/$file"
         fi
     done
 }
 
 newer_than() {
+    # $1 is newer than $2
     [ -s "$1" ] && [ -s "$2" ] && {
         res=$(find "$1" -prune -newer "$2")
         [ -n "$res" ]
@@ -93,7 +98,8 @@ build() {
 
     (cd "$b" && build_real) && {
         for ext in pdf synctex.gz; do
-            [ -f "$b/$n.$ext" ] && ln -sf "$b/$n.$ext" "$n.$ext"
+            [ -f "$b/$n.$ext" ] &&
+                run_showing cp "$b/$n.$ext" "$n.$ext"
         done
     }
 }
@@ -337,6 +343,7 @@ main() {
                 return 1 ;;
         esac
     fi
+    f_dir=$(dirname "$(realpath "$f")")
     f="${f%.*}"
     # TODO: watch multiple bib files
     f_bib=$(find . -maxdepth 1 -name '*.bib' | head -n1)

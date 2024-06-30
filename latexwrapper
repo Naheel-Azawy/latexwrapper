@@ -51,6 +51,7 @@ cleanup() {
 links() {
     n=$(basename "$f")
     b="./.$n.build"
+    mkdir -p "$b"
     find . -mindepth 1 -type d | grep -v "$b" | xargs -I {} mkdir -p "$b"/{}
     find . -mindepth 1 -type f | grep -v "$b" | while read -r file; do
         if ! [ -L "$PWD/$b/$file" ] ||
